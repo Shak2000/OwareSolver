@@ -69,6 +69,12 @@ class Game:
             self.board[i] = 0
         return True
 
+    def undo(self):
+        if len(self.history) > 0:
+            self.board, self.top, self.bottom, self.player = self.history.pop()
+            return True
+        return False
+
     def move(self, house):
         if 0 < house < 7:
             # First, check the "feeding" rule.
