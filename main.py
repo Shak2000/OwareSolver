@@ -1,4 +1,5 @@
 import random
+import copy
 
 
 class Game:
@@ -37,6 +38,7 @@ class Game:
 
     def get_winner(self):
         """Checks for a winner and returns the winner's player character ('T' or 'B'), 'Tie', or None."""
+        # A player wins if they capture more than 24 beads.
         if self.top > 24 or self.bottom > 24:
             if self.top > self.bottom:
                 return 'T'
@@ -45,66 +47,147 @@ class Game:
             else:
                 return 'Tie'
 
-        # Check for game end conditions
-        if self.capture_top_end():
-            return 'T' if self.top > self.bottom else ('B' if self.bottom > self.top else 'Tie')
-        if self.capture_bottom_end():
-            return 'B' if self.bottom > self.top else ('T' if self.top > self.bottom else 'Tie')
+        # Check for game end conditions where a player's side is empty
+        top_side_empty = all(bead == 0 for bead in self.board[6:12])
+        bottom_side_empty = all(bead == 0 for bead in self.board[0:6])
 
-        return None
-
-    def capture_top(self, index):
-        """Captures beads for the top player."""
-        if 0 <= index < 6:
-            while index >= 0 and (1 < self.board[index] < 4):
-                self.top += self.board[index]
-                self.board[index] = 0
-                index -= 1
-            return True
-        return False
-
-    def capture_bottom(self, index):
-        """Captures beads for the bottom player."""
-        if 5 < index < 12:
-            while index > 5 and (1 < self.board[index] < 4):
-                self.bottom += self.board[index]
-                self.board[index] = 0
-                index -= 1
-            return True
-        return False
-
-    def capture_top_end(self):
-        """End-of-game capture for the top player."""
-        # Check if the bottom player has any beads.
-        if all(self.board[i] == 0 for i in range(6)):
-            # If so, the top player captures all remaining beads on their side.
-            self.top += sum(self.board[6:12])
-            for i in range(6, 12):
-                self.board[i] = 0
-            return True
-        return False
-
-    def capture_bottom_end(self):
-        """End-of-game capture for the bottom player."""
-        # Check if the top player has any beads.
-        if all(self.board[i] == 0 for i in range(6, 12)):
-            # If so, the bottom player captures all remaining beads on their side.
+        if top_side_empty and self.player == 'T':
             self.bottom += sum(self.board[0:6])
             for i in range(6):
                 self.board[i] = 0
-            return True
-        return False
+            if self.bottom > self.top:
+                return 'B'
+            elif self.top > self.bottom:
+                return 'T'
+            else:
+                return 'Tie'
+
+        if bottom_side_empty and self.player == 'B':
+            self.top += sum(self.board[6:12])
+            for i in range(6, 12):
+                self.board[i] = 0
+            if self.top > self.bottom:
+                return 'T'
+            elif self.bottom > self.top:
+                return 'B'
+            else:
+                return 'Tie'
+
+        # Check if the game is stalled and no further moves are possible
+        if not self.get_possible_moves(self.board, self.player):
+            self.top += sum(self.board[6:12])
+            self.bottom += sum(self.board[0:6])
+            for i in range(12):
+                self.board[i] = 0
+            if self.top > self.bottom:
+                return 'T'
+            elif self.bottom > self.top:
+                return 'B'
+            else:
+                return 'Tie'
+
+        return None
 
     def undo(self):
         """Undoes the last move."""
         if len(self.history) > 0:
             self.board, self.top, self.bottom, self.player = self.history.pop()
-            self.switch()
             return True
         return False
 
+    def _simulate_move(self, house, board, top_score, bottom_score, player):
+        """
+        Simulates a move on a deep copy of the board state and returns the new state.
+        This is for the minimax algorithm and does not modify the game object's state.
+        """
+        sim_board = copy.deepcopy(board)
+        sim_top = top_score
+        sim_bottom = bottom_score
+
+        start_index = 0
+        if player == 'T':
+            start_index = 5 + house
+            if sim_board[start_index] == 0:
+                return None, None, None
+        else:  # player == 'B'
+            start_index = house - 1
+            if sim_board[start_index] == 0:
+                return None, None, None
+
+        # Check feeding rule for simulation
+        is_opponent_side_empty = (player == 'T' and all(sim_board[i] == 0 for i in range(6))) or \
+                                 (player == 'B' and all(sim_board[i] == 0 for i in range(6, 12)))
+
+        if is_opponent_side_empty:
+            can_feed = False
+            player_start_index = 6 if player == 'T' else 0
+            player_end_index = 12 if player == 'T' else 6
+            for i in range(player_start_index, player_end_index):
+                if sim_board[i] > 0:
+                    temp_beads_to_sow = sim_board[i]
+                    temp_board = list(sim_board)
+                    temp_board[i] = 0
+                    current_index = i
+                    while temp_beads_to_sow > 0:
+                        current_index = (current_index + 1) % 12
+                        temp_board[current_index] += 1
+                        temp_beads_to_sow -= 1
+
+                    if player == 'T' and any(temp_board[j] > sim_board[j] for j in range(6)):
+                        can_feed = True
+                        break
+                    elif player == 'B' and any(temp_board[j] > sim_board[j] for j in range(6, 12)):
+                        can_feed = True
+                        break
+
+            if can_feed:
+                current_beads = sim_board[start_index]
+                if player == 'T':
+                    if start_index + current_beads < 6:
+                        return None, None, None
+                else:  # player 'B'
+                    if (start_index + current_beads) % 12 < 6 and (start_index + current_beads) % 12 > start_index:
+                        return None, None, None
+
+        # Sowing the beads
+        beads_to_sow = sim_board[start_index]
+        sim_board[start_index] = 0
+        current_index = start_index
+
+        while beads_to_sow > 0:
+            current_index = (current_index + 1) % 12
+            if current_index == start_index:
+                continue
+            sim_board[current_index] += 1
+            beads_to_sow -= 1
+
+        last_index = current_index
+        while True:
+            if player == 'T':
+                if 0 <= last_index < 6:
+                    if sim_board[last_index] in [2, 3]:
+                        sim_top += sim_board[last_index]
+                        sim_board[last_index] = 0
+                        last_index = (last_index - 1 + 12) % 12
+                    else:
+                        break
+                else:
+                    break
+            else:  # player 'B'
+                if 6 <= last_index < 12:
+                    if sim_board[last_index] in [2, 3]:
+                        sim_bottom += sim_board[last_index]
+                        sim_board[last_index] = 0
+                        last_index = (last_index - 1 + 12) % 12
+                    else:
+                        break
+                else:
+                    break
+
+        return sim_board, sim_top, sim_bottom
+
     def move(self, house):
-        """Executes a move for the current player."""
+        """Executes a move for the current player on the actual game board."""
         # Input validation for house number (1-6)
         if not 1 <= house <= 6:
             print("Invalid move. Please choose a house number between 1 and 6.")
@@ -125,12 +208,12 @@ class Game:
                 print("Invalid move. You cannot sow from an empty house.")
                 return False
 
-        # First, check the "feeding" rule: A player must feed an empty opponent's side if possible.
+        # Check the "feeding" rule
         is_opponent_side_empty = False
         if self.player == 'T':
             if all(self.board[i] == 0 for i in range(6)):
                 is_opponent_side_empty = True
-        else:  # self.player == 'B'
+        else:
             if all(self.board[i] == 0 for i in range(6, 12)):
                 is_opponent_side_empty = True
 
@@ -140,38 +223,23 @@ class Game:
             player_end_index = 12 if self.player == 'T' else 6
             for i in range(player_start_index, player_end_index):
                 if self.board[i] > 0:
-                    num_beads = self.board[i]
-                    current_index = i
-                    temp_board = list(self.board)
-
-                    # Simulate the move to check if it feeds the opponent
-                    temp_beads_to_sow = temp_board[i]
-                    temp_board[i] = 0
-
-                    while temp_beads_to_sow > 0:
-                        current_index = (current_index + 1) % 12
-                        temp_board[current_index] += 1
-                        temp_beads_to_sow -= 1
-
-                    # Check if any bead landed on the opponent's side
-                    if self.player == 'T':
-                        # Opponent is 'B', their houses are indices 0-5
-                        if any(temp_board[j] > self.board[j] for j in range(6)):
+                    temp_state, _, _ = self._simulate_move(i - 5 if self.player == 'T' else i + 1, self.board, self.top,
+                                                           self.bottom, self.player)
+                    if temp_state:
+                        if self.player == 'T' and any(temp_state[j] > self.board[j] for j in range(6)):
                             feeding_moves.append(i - 5)
-                    else:  # self.player == 'B'
-                        # Opponent is 'T', their houses are indices 6-11
-                        if any(temp_board[j] > self.board[j] for j in range(6, 12)):
+                        elif self.player == 'B' and any(temp_state[j] > self.board[j] for j in range(6, 12)):
                             feeding_moves.append(i + 1)
 
             if feeding_moves:
-                if house not in feeding_moves:
+                if house not in set(feeding_moves):
                     print(
                         f"Invalid move. Your opponent's side is empty. You must make a move that feeds them. "
                         f"Possible feeding moves: {sorted(list(set(feeding_moves)))}")
                     return False
 
-        # If the move is valid, proceed with the move.
-        self.history.append(([i for i in self.board], self.top, self.bottom, self.player))
+        # Save the current state for undo
+        self.history.append((copy.deepcopy(self.board), self.top, self.bottom, self.player))
 
         # Sowing the beads
         beads_to_sow = self.board[start_index]
@@ -180,7 +248,6 @@ class Game:
 
         while beads_to_sow > 0:
             current_index = (current_index + 1) % 12
-            # Skip the starting hole as per Oware rules
             if current_index == start_index:
                 continue
             self.board[current_index] += 1
@@ -211,6 +278,94 @@ class Game:
                     break
 
         return True
+
+    def get_possible_moves(self, board, player):
+        """Returns a list of all possible valid moves for the current player."""
+        possible_moves = []
+        if player == 'T':
+            for house in range(6, 12):
+                if board[house] > 0:
+                    possible_moves.append(house - 5)
+        else:  # player 'B'
+            for house in range(6):
+                if board[house] > 0:
+                    possible_moves.append(house + 1)
+        return possible_moves
+
+    def evaluate_board(self, board, top_score, bottom_score):
+        """
+        Evaluates the board state.
+        +999 for a top player win, -999 for a bottom player win.
+        Otherwise, returns the difference in scores.
+        """
+        # The game could end in the middle of the minimax tree. Check for a winner.
+        temp_game = Game()
+        temp_game.board = copy.deepcopy(board)
+        temp_game.top = top_score
+        temp_game.bottom = bottom_score
+
+        winner = temp_game.get_winner()
+        if winner == 'T':
+            return 999
+        elif winner == 'B':
+            return -999
+        else:
+            return top_score - bottom_score
+
+    def minimax(self, board, top_score, bottom_score, player, depth, alpha, beta):
+        """
+        Minimax algorithm with alpha-beta pruning.
+        Returns the best score and the corresponding move.
+        """
+        winner = self.get_winner()
+        if winner or depth == 0:
+            return self.evaluate_board(board, top_score, bottom_score), None
+
+        if player == 'T':  # Maximizing player
+            max_eval = float('-inf')
+            best_move = None
+            moves = self.get_possible_moves(board, player)
+            for move_choice in moves:
+                new_board, new_top, new_bottom = self._simulate_move(move_choice, board, top_score, bottom_score,
+                                                                     player)
+                if new_board:
+                    val, _ = self.minimax(new_board, new_top, new_bottom, 'B', depth - 1, alpha, beta)
+                    if val > max_eval:
+                        max_eval = val
+                        best_move = move_choice
+                    alpha = max(alpha, val)
+                    if beta <= alpha:
+                        break
+            return max_eval, best_move
+        else:  # Minimizing player
+            min_eval = float('inf')
+            best_move = None
+            moves = self.get_possible_moves(board, player)
+            for move_choice in moves:
+                new_board, new_top, new_bottom = self._simulate_move(move_choice, board, top_score, bottom_score,
+                                                                     player)
+                if new_board:
+                    val, _ = self.minimax(new_board, new_top, new_bottom, 'T', depth - 1, alpha, beta)
+                    if val < min_eval:
+                        min_eval = val
+                        best_move = move_choice
+                    beta = min(beta, val)
+                    if beta <= alpha:
+                        break
+            return min_eval, best_move
+
+    def ai_move(self, depth):
+        """Finds and executes the best move using the minimax algorithm."""
+        print(f"Computer ('{self.player}') is thinking with a depth of {depth}...")
+        _, best_move = self.minimax(self.board, self.top, self.bottom, self.player, depth, float('-inf'), float('inf'))
+
+        if best_move:
+            self.move(best_move)
+            print(f"Computer ('{self.player}') chose to move from house {best_move}.")
+            self.switch()
+            return True
+        print("Computer failed to find a valid move.")
+        return False
 
 
 def display_board(game):
@@ -262,10 +417,11 @@ def main():
                 game_active = False
                 continue
 
-            print("\n(1) Make a move")
-            print("(2) Undo move")
-            print("(3) Restart game")
-            print("(4) Quit")
+            print("\n(1) Make a human move")
+            print("(2) Let computer make a move")
+            print("(3) Undo last move")
+            print("(4) Restart game")
+            print("(5) Quit")
             choice = input("Enter your choice: ")
 
             if choice == '1':
@@ -279,14 +435,23 @@ def main():
                 except ValueError:
                     print("Invalid input. Please enter a number.")
             elif choice == '2':
+                try:
+                    depth = int(input("Enter minimax depth: "))
+                    if game.ai_move(depth):
+                        print("Computer move successful!")
+                    else:
+                        print("Computer move failed.")
+                except ValueError:
+                    print("Invalid input. Please enter a number.")
+            elif choice == '3':
                 if game.undo():
                     print("Last move undone.")
                     game.switch()
                 else:
                     print("Cannot undo. No moves in history.")
-            elif choice == '3':
-                game.start()
             elif choice == '4':
+                game.start()
+            elif choice == '5':
                 print("Thanks for playing!")
                 break
             else:
