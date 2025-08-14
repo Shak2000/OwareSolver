@@ -368,25 +368,24 @@ class Game:
         return False
 
 
-def display_board(game):
-    """
-    Displays the game board with the specified formatting.
-    Top houses (player 'T'): indices 11 down to 6.
-    Bottom houses (player 'B'): indices 0 up to 5.
-    """
-    print("-" * 35)
-    print("Top Player Score: ", game.top)
-    print("     6       5       4       3       2       1  <-- Top Player Houses")
-    print("   " + "    ".join([f"[{game.board[i]:2}]" for i in range(11, 5, -1)]))
-    print("  " + "-" * 30)
-    print("   " + "    ".join([f"[{game.board[i]:2}]" for i in range(6)]))
-    print("     1       2       3       4       5       6  <-- Bottom Player Houses")
-    print("Bottom Player Score: ", game.bottom)
-    print("-" * 35)
-    print(f"Current Player: '{game.player}'")
-
-
 def main():
+    def display_board(curr_game):
+        """
+        Displays the game board with the specified formatting.
+        Top houses (player 'T'): indices 11 down to 6.
+        Bottom houses (player 'B'): indices 0 up to 5.
+        """
+        print("-" * 35)
+        print("Top Player Score: ", curr_game.top)
+        print("     6       5       4       3       2       1  <-- Top Player Houses")
+        print("   " + "    ".join([f"[{curr_game.board[i]:2}]" for i in range(11, 5, -1)]))
+        print("  " + "-" * 30)
+        print("   " + "    ".join([f"[{curr_game.board[i]:2}]" for i in range(6)]))
+        print("     1       2       3       4       5       6  <-- Bottom Player Houses")
+        print("Bottom Player Score: ", curr_game.bottom)
+        print("-" * 35)
+        print(f"Current Player: '{curr_game.player}'")
+
     """Main function to run the Oware Solver."""
     print("Welcome to the Oware Solver!")
     game = Game()
