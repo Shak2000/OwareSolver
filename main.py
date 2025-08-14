@@ -95,7 +95,7 @@ class Game:
             return True
         return False
 
-    def _simulate_move(self, house, board, top_score, bottom_score, player):
+    def simulate_move(self, house, board, top_score, bottom_score, player):
         """
         Simulates a move on a deep copy of the board state and returns the new state.
         This is for the minimax algorithm and does not modify the game object's state.
@@ -223,8 +223,8 @@ class Game:
             player_end_index = 12 if self.player == 'T' else 6
             for i in range(player_start_index, player_end_index):
                 if self.board[i] > 0:
-                    temp_state, _, _ = self._simulate_move(i - 5 if self.player == 'T' else i + 1, self.board, self.top,
-                                                           self.bottom, self.player)
+                    temp_state, _, _ = self.simulate_move(i - 5 if self.player == 'T' else i + 1, self.board, self.top,
+                                                          self.bottom, self.player)
                     if temp_state:
                         if self.player == 'T' and any(temp_state[j] > self.board[j] for j in range(6)):
                             feeding_moves.append(i - 5)
@@ -326,8 +326,8 @@ class Game:
             best_move = None
             moves = self.get_possible_moves(board, player)
             for move_choice in moves:
-                new_board, new_top, new_bottom = self._simulate_move(move_choice, board, top_score, bottom_score,
-                                                                     player)
+                new_board, new_top, new_bottom = self.simulate_move(move_choice, board, top_score, bottom_score,
+                                                                    player)
                 if new_board:
                     val, _ = self.minimax(new_board, new_top, new_bottom, 'B', depth - 1, alpha, beta)
                     if val > max_eval:
@@ -342,8 +342,8 @@ class Game:
             best_move = None
             moves = self.get_possible_moves(board, player)
             for move_choice in moves:
-                new_board, new_top, new_bottom = self._simulate_move(move_choice, board, top_score, bottom_score,
-                                                                     player)
+                new_board, new_top, new_bottom = self.simulate_move(move_choice, board, top_score, bottom_score,
+                                                                    player)
                 if new_board:
                     val, _ = self.minimax(new_board, new_top, new_bottom, 'T', depth - 1, alpha, beta)
                     if val < min_eval:
