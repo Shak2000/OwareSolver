@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oware Solver</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Oware Solver</h1>
+        <div id="game-status" class="game-status">
+            <span id="player-turn"></span>
+        </div>
+
+        <div id="top-score-container" class="score-container">
+            <span class="score-label">Top Score:</span>
+            <span id="top-score" class="score">0</span>
+        </div>
+
+        <div class="board-container">
+            <!-- Top player houses (6-11) -->
+            <div class="player-houses top-player">
+                <div class="house-label">Top Player's Houses</div>
+                <div class="houses">
+                    <!-- Houses are reversed for visual layout -->
+                    <div class="house" id="house-11" data-house-id="11"></div>
+                    <div class="house" id="house-10" data-house-id="10"></div>
+                    <div class="house" id="house-9" data-house-id="9"></div>
+                    <div class="house" id="house-8" data-house-id="8"></div>
+                    <div class="house" id="house-7" data-house-id="7"></div>
+                    <div class="house" id="house-6" data-house-id="6"></div>
+                </div>
+            </div>
+
+            <!-- Bottom player houses (0-5) -->
+            <div class="player-houses bottom-player">
+                <div class="houses">
+                    <div class="house" id="house-0" data-house-id="0"></div>
+                    <div class="house" id="house-1" data-house-id="1"></div>
+                    <div class="house" id="house-2" data-house-id="2"></div>
+                    <div class="house" id="house-3" data-house-id="3"></div>
+                    <div class="house" id="house-4" data-house-id="4"></div>
+                    <div class="house" id="house-5" data-house-id="5"></div>
+                </div>
+                <div class="house-label">Bottom Player's Houses</div>
+            </div>
+        </div>
+
+        <div id="bottom-score-container" class="score-container">
+            <span class="score-label">Bottom Score:</span>
+            <span id="bottom-score" class="score">0</span>
+        </div>
+
+        <div class="controls">
+            <button id="start-game-btn">Start New Game</button>
+            <button id="undo-btn" disabled>Undo Last Move</button>
+            <button id="ai-move-btn" disabled>AI Move</button>
+            <input type="number" id="depth-input" value="5" min="1" max="10">
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+</body>
+</html>
