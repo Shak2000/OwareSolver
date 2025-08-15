@@ -364,6 +364,11 @@ class Game:
             print(f"Computer ('{self.player}') chose to move from house {best_move}.")
             self.switch()
             return True
+        else:
+            for i in range(1, 7):
+                if self.move(i):
+                    print(f"Computer ('{self.player}') chose to move from house {i}.")
+                    return True
         print("Computer failed to find a valid move.")
         return False
 
