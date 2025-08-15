@@ -15,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // API calls
     const API_URL = window.location.origin;
 
+    // State variable to track if the AI is thinking
+    let isThinking = false;
+
     /**
      * Fetches the current game state (board, scores, player) from the server.
      * @returns {Promise<object>} The game state.
@@ -57,13 +60,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update player turn message
         playerTurnElement.textContent = `Current Player: ${gameState.player === 'T' ? 'Top' : 'Bottom'}`;
 
-        // Enable/disable buttons based on game state
-        undoBtn.disabled = gameState.history_length === 0;
-        aiMoveBtn.disabled = !!gameState.winner; // Disable if a winner exists
+        // Disable buttons and houses if AI is thinking or a winner exists
+        const disableAll = isThinking || !!gameState.winner;
+        undoBtn.disabled = disableAll || gameState.history_length === 0;
+        aiMoveBtn.disabled = disableAll;
+        startGameBtn.disabled = isThinking;
+        depthInput.disabled = isThinking;
 
-        // Disable house clicks if a winner exists
         boardHouses.forEach(house => {
-            const isClickable = !gameState.winner;
+            const isClickable = !disableAll;
             house.style.cursor = isClickable ? 'pointer' : 'not-allowed';
             if (isClickable) {
                 house.classList.add('active');
@@ -77,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
             playerTurnElement.textContent = `Game Over! Winner is ${gameState.winner === 'Tie' ? 'Tie' : gameState.winner === 'T' ? 'Top Player' : 'Bottom Player'}.`;
             aiMoveBtn.disabled = true;
             undoBtn.disabled = true;
+            startGameBtn.disabled = false;
         }
     }
 
@@ -113,6 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {number} houseId - The 0-based index of the house.
      */
     async function makeMove(houseId) {
+        if (isThinking) return;
+
         try {
             const response = await fetch(`${API_URL}/move/${houseId}`, { method: 'POST' });
             const success = await response.json();
@@ -136,6 +144,11 @@ document.addEventListener('DOMContentLoaded', () => {
      * Triggers an AI move.
      */
     async function makeAIMove() {
+        if (isThinking) return;
+
+        isThinking = true;
+        updateUI(await getGameState()); // Update UI to reflect thinking state
+
         try {
             const depth = depthInput.value;
             // The AI move logic is a bit more complex in your main.py, it finds the best move and
@@ -146,6 +159,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('AI made a move.');
         } catch (error) {
             console.error('Error making AI move:', error);
+        } finally {
+            isThinking = false;
+            updateUI(await getGameState()); // Final update to re-enable controls
         }
     }
 
@@ -156,6 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     boardHouses.forEach(house => {
         house.addEventListener('click', () => {
+            if (isThinking) return;
+
             const houseId = parseInt(house.dataset.houseId);
             // We need to determine the player and their corresponding house numbers.
             // The API move() method takes 1-6 as input, not the 0-11 index.
