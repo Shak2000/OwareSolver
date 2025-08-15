@@ -77,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
             playerTurnElement.textContent = `Game Over! Winner is ${gameState.winner === 'Tie' ? 'Tie' : gameState.winner === 'T' ? 'Top Player' : 'Bottom Player'}.`;
             aiMoveBtn.disabled = true;
             undoBtn.disabled = true;
-            startGameBtn.disabled = false;
         }
     }
 
@@ -89,7 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
             await fetch(`${API_URL}/start`, { method: 'POST' });
             const newState = await getGameState();
             updateUI(newState);
-            startGameBtn.disabled = true;
             console.log('New game started.');
         } catch (error) {
             console.error('Error starting new game:', error);
@@ -179,23 +177,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Initial state setup on page load
-    // We need to modify the app.py to get the full game state.
-    // Let's add a new endpoint for this.
-    // The current endpoints are separate, so we'll need to fetch multiple times or
-    // modify the backend. I'll propose a modification to app.py to simplify this.
-    // For now, let's just create a function to get the current state.
     async function getInitialState() {
-        // Since we can't modify the user's backend, we'll have to make multiple calls.
-        // This is not ideal but works with the provided API.
-        // I will add a new endpoint to the app.py file to make this more efficient.
-        // Let's assume the new endpoint exists and is called '/get_game_state'.
-        // If not, the UI will still work, but with separate calls.
         const response = await fetch(`${API_URL}/get_game_state`);
         const data = await response.json();
         updateUI(data);
     }
 
-    // Call getInitialState to set up the board on page load.
-    // This will work after the backend is updated with the new endpoint.
-    // For now, the user needs to press "Start New Game" to initialize the board.
+    getInitialState();
 });
